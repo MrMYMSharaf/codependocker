@@ -1,0 +1,11 @@
+# This is needed for local development
+[server]
+
+# Do not open a browser automatically
+headless = true
+
+# Enable hot-reloading when files are saved
+runOnSave = true
+
+# Use pull-based file watching (better for Docker environments)
+fileWatcherType = "poll"

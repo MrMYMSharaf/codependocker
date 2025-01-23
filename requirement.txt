@@ -1,0 +1,11 @@
+streamlit
+pandas<2.2.0
+numpy >=1.26.2
+openpyxl
+matplotlib
+seaborn
+ibm-watsonx-ai==1.2.1
+langchain-community==0.3.15
+python-dotenv==1.0.1
+ibm-watson
+ibm-cos-sdk
