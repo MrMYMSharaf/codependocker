@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from Rag import generate_marketing_message_mistral
 from llama import generate_marketing_message_llama
-from VoiceGEN import text_to_speech_conversion,list_available_voices 
+from de import random_selected_title
+
 
 
 # Initialize session state
@@ -126,24 +127,11 @@ with st.sidebar:
         "<h2 style='font-weight: bold; font-size: 1 rem;'>Tone of the Voice</h2>",
         unsafe_allow_html=True
     )
-    # Fetch available voices
-    voices = list_available_voices()
-    filtered_voices = [voice for voice in voices if voice["language"].startswith("en")]
-
-    # Prepare options for the selectbox
-    voice_options = [f"{voice['name']}" for voice in filtered_voices]
-
-    default_voice = "en-US_LisaExpressive"
-
-    # Set default value in session state if not already set
-    if "selected_voice" not in st.session_state:
-     st.session_state.selected_voice = default_voice
+   
 
     
     # voice = st.selectbox('   ', ('Formal', 'Empathetic', 'Humorous'), key='voice', label_visibility="collapsed")
-    selected_voice = st.selectbox('Choose a Voice:',options=voice_options,key='voice',
-                                  index=voice_options.index(st.session_state.selected_voice),
-                                  label_visibility="visible")
+    selected_voice = st.selectbox('Choose a Voice:',["Empathetic","Formal","Humorous"])
     
     # Update the session state with the selected voice
     st.session_state.selected_voice = selected_voice
@@ -320,31 +308,85 @@ st.header("Marketing Message Generation with Watsonx.ai")
 # Check if dataframe is loaded in session state
 
 if st.session_state.get('dataframe') is not None:
+
+    card_links = {
+    "World Master Card": "https://www.boc.lk/personal-banking/cards/credit-cards/world-master-card",
+    "Titanium Card": "https://www.boc.lk/personal-banking/cards/credit-cards/master-titanium-card"
+}
+    # Create two columns
+    col1, col2 = st.columns(2)
+
+    # Radio button in the first column
+    with col1:
+        # Radio button for selecting card type
+        card_type = st.radio(
+            "Choose a Card:",
+            list(card_links.keys())  # Dynamically get card names
+        )
+
+    # Select box in the second column
+    with col2:
+        category = st.selectbox(
+            "Select a Category:",
+            ["Dining", "Travelling", "Other"]
+        )
+    
+    st.divider()
+    
     # Initialize session state variables if they don't exist
     if 'generated_messages' not in st.session_state:
         st.session_state.generated_messages = False
     
     if st.button("Generate the Marketing Message"):
-        # Get customer details
+         
         customer_name = st.session_state.selected_name
+        selected_voice = st.session_state.selected_voice
         discount = 20
         hotel_name = "Apa Villa Thalpe"
         start_date = "04th September 2024"
         end_date = "30th April 2025"
-        link = "https://www.boc.lk/personal-banking/cards/credit-cards/master-titanium-card"
-        
-        # Generate messages from both models
-        st.session_state.mistral_message = generate_marketing_message_mistral(
-            customer_name, discount, hotel_name, start_date, end_date, link
-        )
-        st.session_state.llama_message = generate_marketing_message_llama(
-            customer_name, discount, hotel_name, start_date, end_date, link
-        )
-        
-        # Set flag to indicate messages have been generated
-        st.session_state.generated_messages = True
+        link = card_links[card_type]
     
+        # Extract location and gender from the dataframe based on the selected customer
+        filtered_data = st.session_state['dataframe'][st.session_state['dataframe'].iloc[:, 0] == customer_name]
+    
+        if not filtered_data.empty:
+            # Get the location and gender for the selected customer
+            residence = filtered_data['Residance'].values[0]
+            employment = filtered_data['Employment'].values[0]  
+            # gender = filtered_data['gender'].values[0]  # Assuming 'Gender' column exists
+
+            # Fetch offers
+            offers = random_selected_title(card_type, category)
+            print(offers)
+            
+            if not offers or "title" not in offers or "offer_details" not in offers:
+                print("❌ No valid offers found for the given card and category.")
+
+            title = offers["title"]
+            details = offers["offer_details"]
+
+            # print(f"Customer Name: {customer_name}")
+            # print(f"Residence: {residence}")
+            # print(f"Employment: {employment}")
+            # print(f"Selected Voice: {selected_voice}")
+            # print(f"Card Type: {card_type}")
+            # print(f"Category: {category}")
+            # print(f"Link: {link}")
+            # print(f"title: {title}")
+            # print(f"details: {details}")
+
+            # Generate messages from both models, passing location and gender as parameters
+            st.session_state.mistral_message = generate_marketing_message_mistral(customer_name, residence, employment, selected_voice, card_type, category,link,title,details)
+            # print(st.session_state.mistral_message)
+            st.session_state.llama_message = generate_marketing_message_llama(customer_name, residence, employment, selected_voice, card_type, category, link, title, details)
+            # print(st.session_state.mistral_message)
+            # Set flag to indicate messages have been generated
+            st.session_state.generated_messages = True
+        else:
+            st.write("No customer data available for the selected name.")
     # Display messages if they have been generated
+    st.divider()
     if st.session_state.generated_messages:
         mistral_col, llama_col = st.columns(2)
         
@@ -374,23 +416,7 @@ if st.session_state.get('dataframe') is not None:
         st.subheader("Selected Marketing Message:")
         st.markdown(st.session_state.selected_message)
         
-        if st.button("Confirm Selection"):
-            try:
-                # Generate and upload the audio file
-                audio_file_url = text_to_speech_conversion(
-                    st.session_state.selected_message,
-                    st.session_state.selected_name,
-                    st.session_state.selected_voice
-                )
-                
-                # Display success message and audio playback
-                print(f"Audio uploaded to: {audio_file_url}")
-                st.audio(audio_file_url, format="audio/mpeg", loop=True)
-                st.success("Marketing message has been confirmed, uploaded, and saved! ")
-                st.success("The Link only Available 60 min")
-                st.write(f"Direct Playback URL: [Play Audio]({audio_file_url})")
-            except Exception as e:
-                st.error(f"An error occurred: {e}")
+        
 
 st.divider()
 

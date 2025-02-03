@@ -6,17 +6,14 @@ import os
 # Load environment variables
 load_dotenv()
 
-def generate_marketing_message_mistral(customer_name, discount, hotel_name, start_date, end_date, link):
+def generate_marketing_message_mistral(customer_name, residence, employment, selected_voice, card_type, category, link, title, details):
     # Set up credentials
     credentials = Credentials(
-        url=os.getenv('IBM_CLOUD_URL'),  # Replace with your IBM Cloud URL
-        api_key=os.getenv('API_KEY'),   # Replace with your API key
+        url=os.getenv('Pay_url_Watsonx'),  # Replace with your IBM Cloud URL
+        api_key=os.getenv('Pay_API_KEY_Watsonx')  # Replace with your API key
     )
 
-    # Specify model_id for inferencing
     model_id = "mistralai/mistral-large"
-
-    # Define model parameters
     parameters = {
         "decoding_method": "greedy",
         "max_new_tokens": 900,
@@ -24,46 +21,65 @@ def generate_marketing_message_mistral(customer_name, discount, hotel_name, star
         "repetition_penalty": 1
     }
 
-    # Initialize ModelInference
     model = ModelInference(
         model_id=model_id,
         params=parameters,
         credentials=credentials,
-        project_id=os.getenv('PROJECT_ID'),  # Replace with your Project ID
-        space_id=os.getenv('space_id')      # Replace with your Space ID
+        project_id=os.getenv('Pay_PROJECT_ID_Watsonx'),  # Replace with your Project ID
+        space_id=os.getenv('space_id')  # Replace with your Space ID
     )
 
-    # Prepare the prompt for the model
-    prompt_input = f"""Using the directions below, generate only one marketing message in a clear and structured manner.
+    # Construct the prompt
+    prompt_input = f"""
+    You are a marketing specialist tasked with creating engaging and professional promotional content. Please generate a concise and compelling marketing message for the following scenario. Adhere strictly to the given format and include all specified sections without any deviation. Use persuasive and positive language suitable for a premium audience.
 
-    # Task Description:
-    # Write a marketing message with the following structure:
-    # - Headline: A short, catchy phrase that highlights the offer.
-    # - Body: A detailed message explaining the offer, including the discount, product/service details, and validity period.
-    # - Call to Action: A clear instruction encouraging the customer to act, such as applying for a card or visiting a link.
+### Details:
+- **Customer Name:** {customer_name}
+- **Card Type:** {card_type}
+- **Category:** {category}
+- **Title:** {title}
+- **Details:** {details}
+- **Link:** {link}
+- **residence** {residence}
+- **employment** {employment}
+- **selected_voice** {selected_voice}
 
-    # Input Details:
-    # customer_name: {customer_name}
-    # discount: {discount}%
-    # hotel_name: {hotel_name}
-    # start_date: {start_date}
-    # end_date: {end_date}
-    # link: {link}
+### Required Format:
+**Headline:** Capture the reader's attention with an engaging headline related to luxury and exclusivity.
 
-    # Example Output (single response):
-    # Headline: Unlock Exclusive Rewards with Your BOC Premium Card!
-    # Body: Dear {customer_name}, we’re excited to offer you an exclusive {discount}% discount at {hotel_name}, 
-    #       available for full board, half board, and bed & breakfast options. 
-    #       This limited-time offer is exclusively for BOC Credit & Debit Cardholders and is valid 
-    #       from {start_date} to {end_date}. Don’t miss this chance to enjoy a luxurious getaway at a special rate.
-    # Call to Action: Apply for your BOC Premium Card now and start enjoying amazing benefits! 
-    #                 Visit {link} to apply today.
+**Body:** Address the customer by name ,residence,employment and describe the exclusive offer. Clearly mention the card type, category, and offer details. Emphasize the exclusivity and the luxurious experience awaiting them. Ensure the tone shoude be selected_voice, and inviting.
 
-    # Do not generate multiple versions, only produce a single, formatted marketing message.
+**Call to Action:** Conclude with a compelling call to action, encouraging the customer to apply for their BOC Premium Card. Include the provided link for further action.
+
+### Strict Instructions:
+- **Only generate ONE marketing message.**  
+- **Do not include "Marketing Message:", notes, explanations, or extra text.**
+- **Output must be strictly in the format below. No variations.** 
+- **Only one output not a more only one.** 
+
+### Expected Output:
+
+**Headline:** "Unlock Exclusive Rewards with Your {card_type}!" 
+
+**Body:** (max 80 words) "Dear {customer_name}, as a {employment} resident of {residence}, your {card_type} unlocks premium {category} privileges. Enjoy {details} designed to enhance your experience. This exclusive offer, tailored to your {selected_voice} preferences, is available for a limited time—don’t miss out!"  
+
+**Call to Action:** "Claim your exclusive benefits today: {link}"
+
+Important: Stick to the required format, using professional language and focusing only on the given details. Do not include additional text or unrelated content.
 """
-    # Generate the response
-    generated_response = model.generate_text(prompt=prompt_input, guardrails=True)
-    return generated_response
 
+    try:
+        # Generate the response
+        print(prompt_input)
+        generated_response = model.generate_text(prompt=prompt_input, guardrails=True)
 
+        # if not generated_response:
+        #     # print("API response is empty.")
+        #     print(f"Generated response: {generated_response}")  # Add this line to check the content of the response
+
+        return generated_response
     
+    except Exception as e:
+        # print(f"Error generating marketing message: {e}")
+        return "Error: Watsonx.ai API request failed."
+

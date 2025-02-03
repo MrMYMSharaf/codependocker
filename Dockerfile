@@ -16,6 +16,6 @@ RUN mkdir -p ~/.streamlit
 COPY .streamlit/config.toml ~/.streamlit/config.toml
 
 # Expose the default Streamlit port
-EXPOSE 8080
+EXPOSE 8501
 
 CMD [ "streamlit","run","src/app.py"]
