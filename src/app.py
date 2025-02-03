@@ -5,6 +5,8 @@ import seaborn as sns
 from Rag import generate_marketing_message_mistral
 from llama import generate_marketing_message_llama
 from de import random_selected_title
+import asyncio
+import markdown
 
 
 
@@ -136,7 +138,14 @@ with st.sidebar:
     # Update the session state with the selected voice
     st.session_state.selected_voice = selected_voice
 
-    
+    expected_columns = [
+    "Name", "DOB", "Employment", "Residance", "Online Shopping(Count)", 
+    "Super Market(Count)", "Grocery(Count)", "Travelling(Count)", 
+    "Payments(Count)", "Other(Count)", "Total No. of Transactions", 
+    "Online Shopping(Volume)", "Super Market(Volume)", "Grocery(Volume)", 
+    "Travelling(Volume)", "Payments(Volume)", "Other(Volume)", 
+    "Volume of Transactions", "Tel.No", "Email Address"
+]
     # File Upload
     st.markdown(
         "<h2 style='font-weight: bold; font-size: 1 rem;'>Please upload a Customer Excel file</h2>",
@@ -152,8 +161,23 @@ with st.sidebar:
     if uploaded_file is not None:
         try:
             dataframe = pd.read_excel(uploaded_file)
-            st.session_state['dataframe'] = dataframe
-            st.success("File uploaded successfully!")
+            # Check if the columns in the uploaded file match the expected columns
+            if list(dataframe.columns) == expected_columns:
+                st.session_state['dataframe'] = dataframe
+                st.success("File uploaded successfully!")
+            else:
+                # Find the mismatched columns
+                missing_columns = set(expected_columns) - set(dataframe.columns)
+                extra_columns = set(dataframe.columns) - set(expected_columns)
+
+                error_message = "The uploaded file does not match the required format.\n"
+
+                if missing_columns:
+                    error_message += f"Missing columns: {', '.join(missing_columns)}.\n"
+                if extra_columns:
+                    error_message += f"Extra columns: {', '.join(extra_columns)}.\n"
+
+                st.error(error_message)
         except Exception as e:
             st.error(f"An error occurred while reading the file: {e}")
 
@@ -337,6 +361,11 @@ if st.session_state.get('dataframe') is not None:
     if 'generated_messages' not in st.session_state:
         st.session_state.generated_messages = False
     
+    if 'generated_messages_df' not in st.session_state:
+        st.session_state['generated_messages_df'] = None  # Will hold the generated messages
+    if 'generated_messages_All' not in st.session_state:
+        st.session_state['generated_messages_All'] = False 
+
     if st.button("Generate the Marketing Message"):
          
         customer_name = st.session_state.selected_name
@@ -376,13 +405,26 @@ if st.session_state.get('dataframe') is not None:
             # print(f"title: {title}")
             # print(f"details: {details}")
 
-            # Generate messages from both models, passing location and gender as parameters
-            st.session_state.mistral_message = generate_marketing_message_mistral(customer_name, residence, employment, selected_voice, card_type, category,link,title,details)
-            # print(st.session_state.mistral_message)
-            st.session_state.llama_message = generate_marketing_message_llama(customer_name, residence, employment, selected_voice, card_type, category, link, title, details)
-            # print(st.session_state.mistral_message)
-            # Set flag to indicate messages have been generated
-            st.session_state.generated_messages = True
+            # # Generate messages from both models, passing location and gender as parameters
+            # st.session_state.mistral_message = generate_marketing_message_mistral(customer_name, residence, employment, selected_voice, card_type, category,link,title,details)
+            # # print(st.session_state.mistral_message)
+            # st.session_state.llama_message = generate_marketing_message_llama(customer_name, residence, employment, selected_voice, card_type, category, link, title, details)
+            # # print(st.session_state.mistral_message)
+            # # Set flag to indicate messages have been generated
+            # st.session_state.generated_messages = True
+
+            async def generate_messages():
+                mistral_task = asyncio.create_task(generate_marketing_message_mistral(customer_name, residence, employment, selected_voice, card_type, category, link, title, details))
+                llama_task = asyncio.create_task(generate_marketing_message_llama(customer_name, residence, employment, selected_voice, card_type, category, link, title, details))
+
+                mistral_message, llama_message = await asyncio.gather(mistral_task, llama_task)
+
+                st.session_state.mistral_message = mistral_message
+                st.session_state.llama_message = llama_message
+                st.session_state.generated_messages = True
+
+            asyncio.run(generate_messages())
+
         else:
             st.write("No customer data available for the selected name.")
     # Display messages if they have been generated
@@ -416,7 +458,87 @@ if st.session_state.get('dataframe') is not None:
         st.subheader("Selected Marketing Message:")
         st.markdown(st.session_state.selected_message)
         
-        
+  
+    # Function to strip markdown formatting
+    def strip_markdown(md_text):
+        html = markdown.markdown(md_text)
+        return ''.join(html.splitlines())  # This removes HTML tags and gives plain text
+
+   # Create a button to generate marketing messages for all customers
+    if st.button("Generate Marketing Messages for All Customers"):
+        # Check if the dataframe is loaded and messages haven't been generated yet
+        if st.session_state['dataframe'] is not None and not st.session_state.generated_messages_All:
+            # Prepare an empty list to store customer marketing messages
+            all_messages = []
+
+            # Iterate through all customers in the dataframe
+            for index, row in st.session_state['dataframe'].iterrows():
+                customer_name = row['Name']
+                residence = row['Residance']
+                employment = row['Employment']
+                selected_voice = st.session_state.selected_voice
+                card_type = "World Master Card"  # Or get dynamically based on some logic
+                category = "Dining"  # Or get dynamically based on user input
+                link = card_links.get(card_type)
+
+                # Get offers
+                offers = random_selected_title(card_type, category)
+                title = offers["title"]
+                details = offers["offer_details"]
+
+                # Generate marketing messages
+                async def generate_messages_for_all():
+                    # Await the tasks and make sure both messages are fetched correctly
+                    mistral_message = await generate_marketing_message_mistral(
+                        customer_name, residence, employment, selected_voice, card_type, category, link, title, details
+                    )
+                    llama_message = await generate_marketing_message_llama(
+                        customer_name, residence, employment, selected_voice, card_type, category, link, title, details
+                    )
+
+                    return {
+                        'Customer Name': customer_name,
+                        'Mistral Message': strip_markdown(mistral_message),  # Clean markdown
+                        'Llama Message': strip_markdown(llama_message)  # Clean markdown
+                }
+
+                # Run the async function and store the result
+                customer_message = asyncio.run(generate_messages_for_all())
+                all_messages.append(customer_message)
+
+            # Convert the list of dictionaries to a DataFrame
+            messages_df = pd.DataFrame(all_messages)
+
+            # Save the DataFrame as a CSV file
+            csv_filename = "generated_marketing_messages.csv"
+            messages_df.to_csv(csv_filename, index=False)
+
+            # Store the DataFrame in session state
+            st.session_state['generated_messages_df'] = messages_df
+            st.session_state.generated_messages_All = True  # Set flag to True after generation
+
+            st.success(f"Marketing messages for all customers have been generated and saved as {csv_filename}.")
+
+        elif st.session_state.generated_messages_All:
+            st.write("Marketing messages have already been generated. You can download the previous results.")
+            # Access the generated messages from session state
+            st.dataframe(st.session_state['generated_messages_df'])
+
+        else:
+            st.write("No customer data available in the session.")
+
+    # If messages have already been generated, show the messages and allow download
+    if st.session_state.generated_messages_All:
+        messages_df = st.session_state['generated_messages_df']  # Retrieve the generated messages
+        st.dataframe(messages_df)
+
+        # Allow the user to download the CSV file
+        st.download_button(
+            label="Download Marketing Messages CSV",
+            data=messages_df.to_csv(index=False),
+            file_name="generated_marketing_messages.csv",
+            mime="text/csv"
+        )
 
 st.divider()
 

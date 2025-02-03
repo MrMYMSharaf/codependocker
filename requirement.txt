@@ -9,3 +9,5 @@ langchain-community==0.3.15
 python-dotenv==1.0.1
 ibm-watson
 ibm-cos-sdk
+streamlit_lottie
+markdown

@@ -2,11 +2,12 @@ from ibm_watsonx_ai import Credentials
 from ibm_watsonx_ai.foundation_models import ModelInference
 from dotenv import load_dotenv
 import os
+import asyncio
 
 # Load environment variables
 load_dotenv()
 
-def generate_marketing_message_mistral(customer_name, residence, employment, selected_voice, card_type, category, link, title, details):
+async def generate_marketing_message_mistral(customer_name, residence, employment, selected_voice, card_type, category, link, title, details):
     # Set up credentials
     credentials = Credentials(
         url=os.getenv('Pay_url_Watsonx'),  # Replace with your IBM Cloud URL
