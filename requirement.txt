@@ -11,3 +11,4 @@ ibm-watson
 ibm-cos-sdk
 streamlit_lottie
 markdown
+beautifulsoup4

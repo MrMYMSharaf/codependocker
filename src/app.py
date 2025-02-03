@@ -6,6 +6,7 @@ from Rag import generate_marketing_message_mistral
 from llama import generate_marketing_message_llama
 from de import random_selected_title
 import asyncio
+from bs4 import BeautifulSoup
 import markdown
 
 
@@ -461,8 +462,9 @@ if st.session_state.get('dataframe') is not None:
   
     # Function to strip markdown formatting
     def strip_markdown(md_text):
-        html = markdown.markdown(md_text)
-        return ''.join(html.splitlines())  # This removes HTML tags and gives plain text
+       html = markdown.markdown(md_text)
+       plain_text = BeautifulSoup(html, "html.parser").get_text()
+       return plain_text
 
    # Create a button to generate marketing messages for all customers
     if st.button("Generate Marketing Messages for All Customers"):
