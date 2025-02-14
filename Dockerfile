@@ -15,6 +15,11 @@ RUN mkdir -p ~/.streamlit
 # Copy the Streamlit config
 COPY .streamlit/config.toml ~/.streamlit/config.toml
 
+# Install the spaCy model
+RUN python -m spacy download en_core_web_sm 
+RUN python -m spacy download en_core_web_lg
+ 
+
 # Expose the default Streamlit port
 EXPOSE 8501
 

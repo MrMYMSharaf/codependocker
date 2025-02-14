@@ -7,7 +7,7 @@ import asyncio
 # Load environment variables
 load_dotenv()
 
-async def generate_marketing_message_llama(customer_name, residence, employment, selected_voice, card_type, category, link, title, details):
+async def generate_marketing_message_llama(customer_name, residence, employment, selected_voice, card_type, category, link, title, details,distance):
     await asyncio.sleep(2)
 
     # Set up credentials
@@ -50,14 +50,16 @@ You are a marketing specialist tasked with creating engaging and professional pr
 - Category: {category}
 - Title: {title}
 - Details: {details}
+- Distance:{distance}
 - Link: {link}
+
 
 ### Required Format:
 No code is required for this task. The final answer is:  
 
 **Headline:** A short, engaging headline (max 10 words) that highlights the offer.  
 
-**Body:** (max 80 words) Address the customer by name and describe the exclusive offer. Clearly mention the card type, category, and offer details while naturally incorporating their residence and employment status, ensuring the tone matches the selected voice to create a tailored experience that resonates with the customer; emphasize exclusivity, luxury, and the premium benefits awaiting them, maintaining a persuasive and professional tone throughout in a **single continuous sentence** without unnecessary spaces or separators.  
+**Body:** (max 80 words) Address the customer by name and describe the exclusive offer. Clearly mention the card type, category, and offer details and Distance while naturally incorporating their residence and employment status, ensuring the tone matches the selected voice to create a tailored experience that resonates with the customer; emphasize exclusivity, luxury, and the premium benefits awaiting them, maintaining a persuasive and professional tone throughout in a **single continuous sentence** without unnecessary spaces or separators.  
 
 **Call to Action:** Conclude with a compelling call to action, encouraging the customer to apply for their BOC Premium Card. Include the provided link for further action.  
 
@@ -81,6 +83,7 @@ No code is required for this task.
 8. Do **NOT** Print Again And Again Body,Call to Action Headline only Print one Time  
 9. Only one output not a more only one.
 10.Do **NOT** print **The final answer is:**
+11.Do **NOT** print **  . . . . . . . . . . **
 
 ### Important:
 The final output must strictly follow the same structured format as the sample. Do not include additional text or unrelated content. Focus only on the given details.

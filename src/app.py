@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from Rag import generate_marketing_message_mistral
 from llama import generate_marketing_message_llama
-from de import random_selected_title
+from de2 import find_closest_offer
+from WeightedScoringSystem import calculate_interest
 import asyncio
 from bs4 import BeautifulSoup
 import markdown
@@ -213,29 +214,59 @@ if st.session_state.get('dataframe') is not None:
 
     # Create two columns for dropdown and page navigation
     col1, col2 = st.columns([3, 1])
+
     with col1:
         st.subheader("Select Names for Analysis:")
 
-        # Ensure the 'selected_name' in session state exists in the current options
+        # Extract unique names from dataframe safely
+        first_column_options = dataframe["Name"].dropna().unique().tolist() if not dataframe.empty else []
+
+        # Ensure 'selected_name' is in session state and valid
         if 'selected_name' not in st.session_state or st.session_state.selected_name not in first_column_options:
             st.session_state.selected_name = first_column_options[0] if first_column_options else None
 
-        # Display the selectbox with safe handling of the index
+        # Display select box safely
         if first_column_options:
             selected_name = st.selectbox(
                 "Choose a name:",
                 first_column_options,
                 index=first_column_options.index(st.session_state.selected_name) if st.session_state.selected_name in first_column_options else 0
             )
-            st.session_state.selected_name = selected_name
+
+            # Update session state if the name changes
+            if st.session_state.selected_name != selected_name:
+                st.session_state.selected_name = selected_name
+                st.rerun()  
+
         else:
             st.write("No options available for selection.")
+            selected_name = None  # Handle empty case
+
+        # Convert DataFrame to list of dictionaries safely
+        users_data = dataframe.to_dict(orient="records") if not dataframe.empty else []
+
+        # Debugging: Show selected name and data
+        st.write(f"DEBUG: Selected Name → {st.session_state.selected_name}")
+        print(dataframe.columns.tolist())  # Check available columns
+
+        # Calculate interest only if a valid name is selected
+        if st.session_state.selected_name and users_data:
+            user_interest = calculate_interest(users_data, st.session_state.selected_name)  # Fix function call
+
+            # Store user_interest in session state
+            st.session_state.user_interest = user_interest
+
+            if user_interest:
+                st.success(f"User: **{st.session_state.selected_name}** is more interested in **{user_interest}**")
+            else:
+                st.warning(f"No transaction data available for **{selected_name}**")
+        else:
+            st.warning("No data available for the selected user.")
+
+    # Debugging: Show stored session state values
+    st.write(f"DEBUG: Stored Interest → {st.session_state.get('user_interest', 'No interest data')}")
 
 
-        # Save the selected name to session_state
-        st.session_state.selected_name = selected_name
-
-    # Page number input comes in col2
     with col2:
         st.markdown("<h4 style='font-weight: bold; margin-bottom: 0;'>Page Number</h4>", unsafe_allow_html=True)
         page_number = st.number_input(
@@ -351,10 +382,12 @@ if st.session_state.get('dataframe') is not None:
 
     # Select box in the second column
     with col2:
-        category = st.selectbox(
-            "Select a Category:",
-            ["Dining", "Travelling", "Other"]
-        )
+        # category = st.selectbox(
+        #     "Select a Category:",
+        #     ["Dining", "Travelling", "Other"]
+        # )
+        category=st.session_state.user_interest
+        st.write(f"The Most Like category : **{category}**")
     
     st.divider()
     
@@ -375,6 +408,7 @@ if st.session_state.get('dataframe') is not None:
         hotel_name = "Apa Villa Thalpe"
         start_date = "04th September 2024"
         end_date = "30th April 2025"
+        # reference_location="DEHIWALA"
         link = card_links[card_type]
     
         # Extract location and gender from the dataframe based on the selected customer
@@ -387,7 +421,7 @@ if st.session_state.get('dataframe') is not None:
             # gender = filtered_data['gender'].values[0]  # Assuming 'Gender' column exists
 
             # Fetch offers
-            offers = random_selected_title(card_type, category)
+            offers = find_closest_offer(card_type, category,residence)
             print(offers)
             
             if not offers or "title" not in offers or "offer_details" not in offers:
@@ -395,16 +429,18 @@ if st.session_state.get('dataframe') is not None:
 
             title = offers["title"]
             details = offers["offer_details"]
-
-            # print(f"Customer Name: {customer_name}")
-            # print(f"Residence: {residence}")
-            # print(f"Employment: {employment}")
-            # print(f"Selected Voice: {selected_voice}")
-            # print(f"Card Type: {card_type}")
-            # print(f"Category: {category}")
-            # print(f"Link: {link}")
-            # print(f"title: {title}")
-            # print(f"details: {details}")
+            distance = offers["distance"]
+            print(f"Customer Name.................: {st.session_state.user_interest}")
+            print(f"Customer Name: {customer_name}")
+            print(f"Residence: {residence}")
+            print(f"Employment: {employment}")
+            print(f"Selected Voice: {selected_voice}")
+            print(f"Card Type: {card_type}")
+            print(f"Category: {category}")
+            print(f"Link: {link}")
+            print(f"title: {title}")
+            print(f"details: {details}")
+            print(f"details: {distance}")
 
             # # Generate messages from both models, passing location and gender as parameters
             # st.session_state.mistral_message = generate_marketing_message_mistral(customer_name, residence, employment, selected_voice, card_type, category,link,title,details)
@@ -415,8 +451,8 @@ if st.session_state.get('dataframe') is not None:
             # st.session_state.generated_messages = True
 
             async def generate_messages():
-                mistral_task = asyncio.create_task(generate_marketing_message_mistral(customer_name, residence, employment, selected_voice, card_type, category, link, title, details))
-                llama_task = asyncio.create_task(generate_marketing_message_llama(customer_name, residence, employment, selected_voice, card_type, category, link, title, details))
+                mistral_task = asyncio.create_task(generate_marketing_message_mistral(customer_name, residence, employment, selected_voice, card_type, category, link, title, details,distance))
+                llama_task = asyncio.create_task(generate_marketing_message_llama(customer_name, residence, employment, selected_voice, card_type, category, link, title, details,distance))
 
                 mistral_message, llama_message = await asyncio.gather(mistral_task, llama_task)
 
@@ -479,27 +515,32 @@ if st.session_state.get('dataframe') is not None:
                 residence = row['Residance']
                 employment = row['Employment']
                 selected_voice = st.session_state.selected_voice
-                card_type = "World Master Card"  # Or get dynamically based on some logic
-                category = "Dining"  # Or get dynamically based on user input
                 link = card_links.get(card_type)
 
+                # **Compute category dynamically for each customer**
+                users_data = st.session_state['dataframe'].to_dict(orient="records")
+                category = calculate_interest(users_data, customer_name)  # **This ensures each customer gets their unique category**
+
+
                 # Get offers
-                offers = random_selected_title(card_type, category)
+                offers = find_closest_offer(card_type, category,residence)
                 title = offers["title"]
                 details = offers["offer_details"]
+                distance = offers["distance"]
 
                 # Generate marketing messages
                 async def generate_messages_for_all():
                     # Await the tasks and make sure both messages are fetched correctly
                     mistral_message = await generate_marketing_message_mistral(
-                        customer_name, residence, employment, selected_voice, card_type, category, link, title, details
+                        customer_name, residence, employment, selected_voice, card_type, category, link, title, details,distance
                     )
                     llama_message = await generate_marketing_message_llama(
-                        customer_name, residence, employment, selected_voice, card_type, category, link, title, details
+                        customer_name, residence, employment, selected_voice, card_type, category, link, title, details,distance
                     )
 
                     return {
                         'Customer Name': customer_name,
+                        'Category': category,
                         'Mistral Message': strip_markdown(mistral_message),  # Clean markdown
                         'Llama Message': strip_markdown(llama_message)  # Clean markdown
                 }

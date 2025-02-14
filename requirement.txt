@@ -12,3 +12,15 @@ ibm-cos-sdk
 streamlit_lottie
 markdown
 beautifulsoup4
+spacy
+phonenumbers 
+pyap
+geopy
+langchain-ibm  
+duckduckgo-search 
+requests
+langgraph
+transformers
+torch
+wikipedia
+wikipedia-api

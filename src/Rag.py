@@ -7,7 +7,7 @@ import asyncio
 # Load environment variables
 load_dotenv()
 
-async def generate_marketing_message_mistral(customer_name, residence, employment, selected_voice, card_type, category, link, title, details):
+async def generate_marketing_message_mistral(customer_name, residence, employment, selected_voice, card_type, category, link, title, details,distance):
     # Set up credentials
     credentials = Credentials(
         url=os.getenv('Pay_url_Watsonx'),  # Replace with your IBM Cloud URL
@@ -44,11 +44,12 @@ async def generate_marketing_message_mistral(customer_name, residence, employmen
 - **residence** {residence}
 - **employment** {employment}
 - **selected_voice** {selected_voice}
+- **distance**{distance}
 
 ### Required Format:
 **Headline:** Capture the reader's attention with an engaging headline related to luxury and exclusivity.
 
-**Body:** Address the customer by name ,residence,employment and describe the exclusive offer. Clearly mention the card type, category, and offer details. Emphasize the exclusivity and the luxurious experience awaiting them. Ensure the tone shoude be selected_voice, and inviting.
+**Body:** Address the customer by name ,residence,employment and describe the exclusive offer and distance. Clearly mention the card type, category, and offer details. Emphasize the exclusivity and the luxurious experience awaiting them. Ensure the tone shoude be selected_voice, and inviting.
 
 **Call to Action:** Conclude with a compelling call to action, encouraging the customer to apply for their BOC Premium Card. Include the provided link for further action.
 
